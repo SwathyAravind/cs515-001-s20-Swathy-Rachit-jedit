@@ -335,7 +335,7 @@ public class StatusBar extends JPanel
 	} //}}}
 
 	//{{{ updateCaretStatus() method
-	/** Updates the status bar with information about the caret position, line number, etc */
+	/** Updates the status bar with information about the caret position, line number, word position etc */
 	public void updateCaretStatus()
 	{
 		if (showCaretStatus)
@@ -370,6 +370,9 @@ public class StatusBar extends JPanel
 				return;
 
 			int bufferLength = buffer.getLength();
+			
+			int wordCount = buffer.getWordStatus(buffer.getLength());
+			int wordPosition = buffer.getWordStatus(textArea.getCaretPosition());
 
 			buffer.getText(start,dot,seg);
 			int virtualPosition = StandardUtilities.getVirtualWidth(seg,
@@ -416,6 +419,28 @@ public class StatusBar extends JPanel
 			{
 				buf.append('(');
 				buf.append(bufferLength);
+				buf.append(')');
+			}
+			
+			if (jEdit.getBooleanProperty("view.status.show-word-offset", true) &&
+				jEdit.getBooleanProperty("view.status.show-word-bufferlength", true))
+			{
+				buf.append('(');
+				buf.append(wordPosition);
+				buf.append('/');
+				buf.append(wordCount);
+				buf.append(')');
+			}
+			else if (jEdit.getBooleanProperty("view.status.show-word-offset", true))
+			{
+				buf.append('(');
+				buf.append(wordPosition);
+				buf.append(')');
+			}
+			else if (jEdit.getBooleanProperty("view.status.show-word-bufferlength", true))
+			{
+				buf.append('(');
+				buf.append(wordCount);
 				buf.append(')');
 			}
 
@@ -472,7 +497,7 @@ public class StatusBar extends JPanel
 	private boolean showCaretStatus;
 	//}}}
 
-	static final String caretTestStr = "9999,999-999 (99999999/99999999)";
+	static final String caretTestStr = "9999,999-999 (99999999/99999999) (99999999/99999999)";
 
 	//{{{ getWidget() method
 	private Widget getWidget(String name)

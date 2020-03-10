@@ -24,6 +24,8 @@ package org.gjt.sp.jedit.buffer;
 
 import javax.swing.text.Segment;
 
+import org.gjt.sp.jedit.View;
+
 /**
  * A class internal to jEdit's document model. You should not use it
  * directly. To improve performance, none of the methods in this class
@@ -38,209 +40,246 @@ import javax.swing.text.Segment;
 class ContentManager
 {
 	//{{{ getLength() method
+
 	public final int getLength()
 	{
 		return length;
 	} //}}}
 
-	//{{{ getText() methods
-	public String getText(int start, int len)
+	public final int getWordStatus(int caretPosition)
 	{
-		if(start >= gapStart)
-			return new String(text,start + gapLength(),len);
-		else if(start + len <= gapStart)
-			return new String(text,start,len);
-		else
+		String newText = getText(0, caretPosition);
+		char[] chars = newText.toCharArray();
+
+		int words = 0;
+		boolean word = true;
+		for (char aChar : chars)
 		{
-			return new String(text,start,gapStart - start)
-				.concat(new String(text,gapEnd(),start + len - gapStart));
+			switch (aChar)
+			{
+			case ' ':
+				word = true;
+				break;
+			case '\t':
+				word = true;
+				break;
+			case '\r':
+				word = true;
+				break;
+			case '\n':
+				word = true;
+				break;
+			default:
+				if (word)
+				{
+					words++;
+					word = false;
+				}
+				break;
+			}
 		}
+		return words;
 	}
 
-	/**
-	 * Returns the specified text range in a <code>Segment</code>.<p>
-	 *
-	 * Using a <classname>Segment</classname> is generally more
-	 * efficient than using a <classname>String</classname> because it
-	 * results in less memory allocation and array copying.<p>
-	 *
-	 *
-	 * @param start The start offset
-	 * @param len The number of characters to get
-	 * @param seg The segment to copy the text to
-	 * @see JEditBuffer#getText(int, int, Segment)
-	 */
-	public void getText(int start, int len, Segment seg)
-	{
-		if(start >= gapStart)
+
+		//{{{ getText() methods
+		public String getText(int start, int len)
 		{
-			seg.array = text;
-			seg.offset = start + gapLength();
-			seg.count = len;
+			if(start >= gapStart)
+				return new String(text,start + gapLength(),len);
+			else if(start + len <= gapStart)
+				return new String(text,start,len);
+			else
+			{
+				return new String(text,start,gapStart - start)
+						.concat(new String(text,gapEnd(),start + len - gapStart));
+			}
 		}
-		else if(start + len <= gapStart)
+
+		/**
+		 * Returns the specified text range in a <code>Segment</code>.<p>
+		 *
+		 * Using a <classname>Segment</classname> is generally more
+		 * efficient than using a <classname>String</classname> because it
+		 * results in less memory allocation and array copying.<p>
+		 *
+		 *
+		 * @param start The start offset
+		 * @param len The number of characters to get
+		 * @param seg The segment to copy the text to
+		 * @see JEditBuffer#getText(int, int, Segment)
+		 */
+		public void getText(int start, int len, Segment seg)
 		{
-			seg.array = text;
-			seg.offset = start;
-			seg.count = len;
-		}
-		else
+			if(start >= gapStart)
+			{
+				seg.array = text;
+				seg.offset = start + gapLength();
+				seg.count = len;
+			}
+			else if(start + len <= gapStart)
+			{
+				seg.array = text;
+				seg.offset = start;
+				seg.count = len;
+			}
+			else
+			{
+				seg.array = new char[len];
+
+				// copy text before gap
+				System.arraycopy(text,start,seg.array,0,gapStart - start);
+
+				// copy text after gap
+				System.arraycopy(text,gapEnd(),seg.array,gapStart - start,
+						len + start - gapStart);
+
+				seg.offset = 0;
+				seg.count = len;
+			}
+		} //}}}
+
+		//{{{ getSegment() method
+		/**
+		 * Returns a read-only segment of the buffer.
+		 * It doesn't copy the text
+		 *
+		 * @param start The start offset
+		 * @param len The number of characters to get
+		 *
+		 * @return a CharSequence that contains the text wanted text
+		 * @since jEdit 4.3pre15
+		 */
+		public CharSequence getSegment(int start, int len)
 		{
-			seg.array = new char[len];
+			if(start >= gapStart)
+				return new BufferSegment(text,start + gapLength(),len);
+			else if(start + len <= gapStart)
+				return new BufferSegment(text,start,len);
+			else
+			{
+				return new BufferSegment(text,start,gapStart - start,
+						new BufferSegment(text,gapEnd(),start + len - gapStart));
+			}
+		} //}}}
 
-			// copy text before gap
-			System.arraycopy(text,start,seg.array,0,gapStart - start);
-
-			// copy text after gap
-			System.arraycopy(text,gapEnd(),seg.array,gapStart - start,
-				len + start - gapStart);
-
-			seg.offset = 0;
-			seg.count = len;
-		}
-	} //}}}
-
-	//{{{ getSegment() method
-	/**
-	 * Returns a read-only segment of the buffer.
-	 * It doesn't copy the text
-	 *
-	 * @param start The start offset
-	 * @param len The number of characters to get
-	 *
-	 * @return a CharSequence that contains the text wanted text
-	 * @since jEdit 4.3pre15
-	 */
-	public CharSequence getSegment(int start, int len)
-	{
-		if(start >= gapStart)
-			return new BufferSegment(text,start + gapLength(),len);
-		else if(start + len <= gapStart)
-			return new BufferSegment(text,start,len);
-		else
+		//{{{ insert() methods
+		public void insert(int start, String str)
 		{
-			return new BufferSegment(text,start,gapStart - start,
-				new BufferSegment(text,gapEnd(),start + len - gapStart));
+			int len = str.length();
+			prepareGapForInsertion(start, len);
+			str.getChars(0,len,text,start);
+			gapStart += len;
+			length += len;
 		}
-	} //}}}
 
-	//{{{ insert() methods
-	public void insert(int start, String str)
-	{
-		int len = str.length();
-		prepareGapForInsertion(start, len);
-		str.getChars(0,len,text,start);
-		gapStart += len;
-		length += len;
+		/**
+		 * Inserts the given data into the buffer.
+		 *
+		 * @since jEdit 4.3pre15
+		 */
+		public void insert(int start, CharSequence str)
+		{
+			int len = str.length();
+			prepareGapForInsertion(start, len);
+			for (int i = 0; i < len; i++)
+			{
+				text[start+i] = str.charAt(i);
+			}
+			gapStart += len;
+			length += len;
+		}
+
+		public void insert(int start, Segment seg)
+		{
+			prepareGapForInsertion(start, seg.count);
+			System.arraycopy(seg.array,seg.offset,text,start,seg.count);
+			gapStart += seg.count;
+			length += seg.count;
+		} //}}}
+
+		//{{{ _setContent() method
+		public void _setContent(char[] text, int length)
+		{
+			assert text != null;
+			assert text.length >= length;
+			this.text = text;
+			this.gapStart = length;
+			this.length = length;
+		} //}}}
+
+		//{{{ remove() method
+		public void remove(int start, int len)
+		{
+			moveGapStart(start);
+			length -= len;
+		} //}}}
+
+		//{{{ Private members
+		private static final char[] EMPTY_TEXT = new char[0];
+		private char[] text = EMPTY_TEXT;
+		private int gapStart;
+		private int length;
+
+		//{{{ gapEnd() method
+		private int gapEnd()
+		{
+			return gapStart + gapLength();
+		} //}}}
+
+		//{{{ gapLength() method
+		private int gapLength()
+		{
+			return text.length - length;
+		} //}}}
+
+		//{{{ moveGapStart() method
+		private void moveGapStart(int newStart)
+		{
+			int gapEnd = gapEnd();
+			int newEnd = gapEnd + (newStart - gapStart);
+
+			if(newStart == gapStart)
+			{
+				// nothing to do
+			}
+			else if(newStart > gapStart)
+			{
+				System.arraycopy(text,gapEnd,text,gapStart,
+						newStart - gapStart);
+			}
+			else if(newStart < gapStart)
+			{
+				System.arraycopy(text,newStart,text,newEnd,
+						gapStart - newStart);
+			}
+
+			gapStart = newStart;
+		} //}}}
+
+		//{{{ ensureCapacity() method
+		private void ensureCapacity(int capacity)
+		{
+			if(capacity >= text.length)
+			{
+				int gapEndOld = gapEnd();
+
+				char[] textN = new char[capacity * 2];
+				System.arraycopy(text,0,textN,0,text.length);
+				text = textN;
+
+				int gapEndNew = gapEnd();
+				System.arraycopy(text,gapEndOld,text,gapEndNew,text.length - gapEndNew);
+			}
+		} //}}}
+
+		//{{{ prepareGapForInsertion() method
+		private void prepareGapForInsertion(int start, int len)
+		{
+			moveGapStart(start);
+			if(gapLength() < len)
+				ensureCapacity(length + len);
+		} //}}}
+
+		//}}}
 	}
-
-	/**
-	 * Inserts the given data into the buffer.
-	 *
-	 * @since jEdit 4.3pre15
-	 */
-	public void insert(int start, CharSequence str)
-	{
-		int len = str.length();
-		prepareGapForInsertion(start, len);
-		for (int i = 0; i < len; i++)
-		{
-			text[start+i] = str.charAt(i);
-		}
-		gapStart += len;
-		length += len;
-	}
-
-	public void insert(int start, Segment seg)
-	{
-		prepareGapForInsertion(start, seg.count);
-		System.arraycopy(seg.array,seg.offset,text,start,seg.count);
-		gapStart += seg.count;
-		length += seg.count;
-	} //}}}
-
-	//{{{ _setContent() method
-	public void _setContent(char[] text, int length)
-	{
-		assert text != null;
-		assert text.length >= length;
-		this.text = text;
-		this.gapStart = length;
-		this.length = length;
-	} //}}}
-
-	//{{{ remove() method
-	public void remove(int start, int len)
-	{
-		moveGapStart(start);
-		length -= len;
-	} //}}}
-
-	//{{{ Private members
-	private static final char[] EMPTY_TEXT = new char[0];
-	private char[] text = EMPTY_TEXT;
-	private int gapStart;
-	private int length;
-
-	//{{{ gapEnd() method
-	private int gapEnd()
-	{
-		return gapStart + gapLength();
-	} //}}}
-
-	//{{{ gapLength() method
-	private int gapLength()
-	{
-		return text.length - length;
-	} //}}}
-
-	//{{{ moveGapStart() method
-	private void moveGapStart(int newStart)
-	{
-		int gapEnd = gapEnd();
-		int newEnd = gapEnd + (newStart - gapStart);
-
-		if(newStart == gapStart)
-		{
-			// nothing to do
-		}
-		else if(newStart > gapStart)
-		{
-			System.arraycopy(text,gapEnd,text,gapStart,
-				newStart - gapStart);
-		}
-		else if(newStart < gapStart)
-		{
-			System.arraycopy(text,newStart,text,newEnd,
-				gapStart - newStart);
-		}
-
-		gapStart = newStart;
-	} //}}}
-
-	//{{{ ensureCapacity() method
-	private void ensureCapacity(int capacity)
-	{
-		if(capacity >= text.length)
-		{
-			int gapEndOld = gapEnd();
-
-			char[] textN = new char[capacity * 2];
-			System.arraycopy(text,0,textN,0,text.length);
-			text = textN;
-
-			int gapEndNew = gapEnd();
-			System.arraycopy(text,gapEndOld,text,gapEndNew,text.length - gapEndNew);
-		}
-	} //}}}
-
-	//{{{ prepareGapForInsertion() method
-	private void prepareGapForInsertion(int start, int len)
-	{
-		moveGapStart(start);
-		if(gapLength() < len)
-			ensureCapacity(length + len);
-	} //}}}
-
-	//}}}
-}
