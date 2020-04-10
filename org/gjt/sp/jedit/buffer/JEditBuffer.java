@@ -317,6 +317,12 @@ public class JEditBuffer
 		// no need to lock since this just returns a value and that's it
 		return contentMgr.getLength();
 	} //}}}
+	
+	public int getWordStatus(int caretPosition)
+	{
+		// no need to lock since this just returns a value and that's it
+		return contentMgr.getWordStatus(caretPosition);
+	} //}}}
 
 	//{{{ getLineCount() method
 	/**
