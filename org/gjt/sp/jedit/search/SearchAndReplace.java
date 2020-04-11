@@ -425,11 +425,6 @@ public class SearchAndReplace
 			if(selection)
 			{
 				s = view.getTextArea().getSelection();
-				if(s == null)
-				{
-					results.searchFailed();
-					return false;
-				}
 			}
 			else
 				s = null;

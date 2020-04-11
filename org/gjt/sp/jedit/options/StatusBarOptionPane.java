@@ -43,101 +43,19 @@ import org.gjt.sp.jedit.*;
  */
 public class StatusBarOptionPane extends AbstractOptionPane
 {
-	//{{{ StatusBarOptionPane constructor
-	public StatusBarOptionPane()
-	{
+	// {{{ StatusBarOptionPane constructor
+	public StatusBarOptionPane() {
 		super("status");
-	} //}}}
+	} // }}}
 
-	//{{{ _init() method
+	// {{{ _init() method
 	@Override
-	protected void _init()
-	{
+	protected void _init() {
 		setLayout(new BorderLayout());
-
-		//{{{ North
-		JPanel checkboxPanel = new JPanel(new GridLayout(2,1));
-		showStatusbar = new JCheckBox(jEdit.getProperty(
-			"options.status.visible"));
-		showStatusbar.setSelected(jEdit.getBooleanProperty("view.status.visible"));
-		checkboxPanel.add(showStatusbar);
-		showStatusbarPlain = new JCheckBox(jEdit.getProperty(
-			"options.status.plainview.visible"));
-		showStatusbarPlain.setSelected(jEdit.getBooleanProperty("view.status.plainview.visible"));
-		checkboxPanel.add(showStatusbarPlain);
-		checkboxPanel.add(new JLabel(jEdit.getProperty(
-			"options.status.caption")));
-
-		JPanel previewPanel = new JPanel();
-		previewStatusBar = new JLabel();
-		previewPanel.add(previewStatusBar);
-		JPanel north = new JPanel(new GridLayout(2,1));
-		north.add(checkboxPanel);
-		north.add(previewPanel);
-		add(north, BorderLayout.NORTH);
-		//}}}
-
-		//{{{ Options panel
-		AbstractOptionPane optionsPanel = new AbstractOptionPane("Status Options");
-		/* Foreground color */
-		optionsPanel.addComponent(jEdit.getProperty("options.status.foreground"),
-			foregroundColor = new ColorWellButton(
-			jEdit.getColorProperty("view.status.foreground")),
-			GridBagConstraints.VERTICAL);
-
-		/* Background color */
-		optionsPanel.addComponent(jEdit.getProperty("options.status.background"),
-			backgroundColor = new ColorWellButton(
-			jEdit.getColorProperty("view.status.background")),
-			GridBagConstraints.VERTICAL);
-
-		/* Memory foreground color */
-		optionsPanel.addComponent(jEdit.getProperty("options.status.memory.foreground"),
-			memForegroundColor = new ColorWellButton(
-			jEdit.getColorProperty("view.status.memory.foreground")),
-			GridBagConstraints.VERTICAL);
-
-		/* Memory background color */
-		optionsPanel.addComponent(jEdit.getProperty("options.status.memory.background"),
-			memBackgroundColor = new ColorWellButton(
-			jEdit.getColorProperty("view.status.memory.background")),
-			GridBagConstraints.VERTICAL);
-
-		optionsPanel.addSeparator();
-		optionsPanel.addComponent(new JLabel(jEdit.getProperty("options.status.caret.title", "Caret position display options:")));
-
-		/*
-		Caret position format: lineno,dot-virtual (caretpos/bufferlength)
-		view.status.show-caret-linenumber -- true shows line number for caret (lineno)
-		view.status.show-caret-dot -- true shows offset in line for caret (dot)
-		view.status.show-caret-virtual -- true shows virtual offset in line for caret (virtual)
-		view.status.show-caret-offset -- true shows caret offset from start of buffer (caretpos)
-		view.status.show-caret-bufferlength -- true shows length of buffer (bufferlength)
-		view.status.show-word-offset -- true shows word offset from start of buffer (caretpos)
-		view.status.show-word-bufferlength -- true shows length of buffer (bufferlength)
-		*/
 		
-		showCaretLineNumber = new JCheckBox(jEdit.getProperty("options.status.caret.linenumber", "Show caret line number"),
-			jEdit.getBooleanProperty("view.status.show-caret-linenumber", true));
-		showCaretLineNumber.setName("showCaretLineNumber");
-		showCaretDot = new JCheckBox(jEdit.getProperty("options.status.caret.dot", "Show caret offset from start of line"),
-			jEdit.getBooleanProperty("view.status.show-caret-dot", true));
-		showCaretDot.setName("showCaretDot");
-		showCaretVirtual = new JCheckBox(jEdit.getProperty("options.status.caret.virtual", "Show caret virtual offset from start of line"),
-			jEdit.getBooleanProperty("view.status.show-caret-virtual", true));
-		showCaretVirtual.setName("showCaretVirtual");
-		showCaretOffset = new JCheckBox(jEdit.getProperty("options.status.caret.offset", "Show caret offset from start of file"),
-			jEdit.getBooleanProperty("view.status.show-caret-offset", true));
-		showCaretOffset.setName("showCaretOffset");
-		showCaretBufferLength = new JCheckBox(jEdit.getProperty("options.status.caret.bufferlength", "Show length of file"),
-			jEdit.getBooleanProperty("view.status.show-caret-bufferlength", true));
-		showCaretBufferLength.setName("showCaretBufferLength");
-		showWordOffset = new JCheckBox(jEdit.getProperty("options.status.word.offset", "Show word offset from start of file"),
-			jEdit.getBooleanProperty("view.status.show-word-offset", true));
-		showWordOffset.setName("showWordOffset");
-		showWordBufferLength = new JCheckBox(jEdit.getProperty("options.status.word.bufferlength", "Show number of words in the file"),
-			jEdit.getBooleanProperty("view.status.show-word-bufferlength", true));
-		showWordBufferLength.setName("showWordBufferLength");
+		createCheckboxPanel();
+		AbstractOptionPane optionsPanel = createAbstractOptionsPanel();
+		initializeAbstractOptionsPanel();
 		
 		optionsPanel.addComponent(showCaretLineNumber);
 		optionsPanel.addComponent(showCaretDot);
@@ -146,34 +64,37 @@ public class StatusBarOptionPane extends AbstractOptionPane
 		optionsPanel.addComponent(showCaretBufferLength);
 		optionsPanel.addComponent(showWordOffset);
 		optionsPanel.addComponent(showWordBufferLength);
-
-		//}}}
-
-
-		//{{{ widgets panel
+		
 		String statusbar = jEdit.getProperty("view.status");
 		StringTokenizer st = new StringTokenizer(statusbar);
+		
 		listModel = new DefaultListModel<String>();
-		while (st.hasMoreTokens())
-		{
+		while (st.hasMoreTokens()) {
 			String token = st.nextToken();
 			listModel.addElement(token);
 		}
-
-
 		list = new JList<String>(listModel);
 		list.setCellRenderer(new WidgetListCellRenderer());
 		list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		list.addListSelectionListener(new ListHandler());
-
 		JPanel widgetsPanel = new JPanel(new BorderLayout());
 		widgetsPanel.add(new JScrollPane(list), BorderLayout.CENTER);
-		//}}}
+		
+		JPanel buttons = createButtons();
+		updateButtons();
+		
+		widgetsPanel.add(buttons, BorderLayout.SOUTH);
+		JTabbedPane tabs = new JTabbedPane();
+		tabs.addTab("Options", optionsPanel);
+		tabs.add("Widgets", widgetsPanel);
+		add(tabs, BorderLayout.CENTER);
+		updatePreview();
+	} 
 
-		//{{{ Create buttons
+	private JPanel createButtons() {
 		JPanel buttons = new JPanel();
-		buttons.setBorder(new EmptyBorder(3,0,0,0));
-		buttons.setLayout(new BoxLayout(buttons,BoxLayout.X_AXIS));
+		buttons.setBorder(new EmptyBorder(3, 0, 0, 0));
+		buttons.setLayout(new BoxLayout(buttons, BoxLayout.X_AXIS));
 		ActionHandler actionHandler = new ActionHandler();
 		add = new RolloverButton(GUIUtilities.loadIcon("Plus.png"));
 		add.setToolTipText(jEdit.getProperty("options.status.add"));
@@ -200,49 +121,110 @@ public class StatusBarOptionPane extends AbstractOptionPane
 		edit.addActionListener(actionHandler);
 		buttons.add(edit);
 		buttons.add(Box.createGlue());
-		//}}}
+		return buttons;
+	}
 
-		updateButtons();
-		widgetsPanel.add(buttons, BorderLayout.SOUTH);
+	private void initializeAbstractOptionsPanel() {
+		showCaretLineNumber = new JCheckBox(
+				jEdit.getProperty("options.status.caret.linenumber", "Show caret line number"),
+				jEdit.getBooleanProperty("view.status.show-caret-linenumber", true));
+		showCaretLineNumber.setName("showCaretLineNumber");
+		showCaretDot = new JCheckBox(
+				jEdit.getProperty("options.status.caret.dot", "Show caret offset from start of line"),
+				jEdit.getBooleanProperty("view.status.show-caret-dot", true));
+		showCaretDot.setName("showCaretDot");
+		showCaretVirtual = new JCheckBox(
+				jEdit.getProperty("options.status.caret.virtual", "Show caret virtual offset from start of line"),
+				jEdit.getBooleanProperty("view.status.show-caret-virtual", true));
+		showCaretVirtual.setName("showCaretVirtual");
+		showCaretOffset = new JCheckBox(
+				jEdit.getProperty("options.status.caret.offset", "Show caret offset from start of file"),
+				jEdit.getBooleanProperty("view.status.show-caret-offset", true));
+		showCaretOffset.setName("showCaretOffset");
+		showCaretBufferLength = new JCheckBox(
+				jEdit.getProperty("options.status.caret.bufferlength", "Show length of file"),
+				jEdit.getBooleanProperty("view.status.show-caret-bufferlength", true));
+		showCaretBufferLength.setName("showCaretBufferLength");
+		showWordOffset = new JCheckBox(
+				jEdit.getProperty("options.status.word.offset", "Show word offset from start of file"),
+				jEdit.getBooleanProperty("view.status.show-word-offset", true));
+		showWordOffset.setName("showWordOffset");
+		showWordBufferLength = new JCheckBox(
+				jEdit.getProperty("options.status.word.bufferlength", "Show number of words in the file"),
+				jEdit.getBooleanProperty("view.status.show-word-bufferlength", true));
+		showWordBufferLength.setName("showWordBufferLength");
+	}
 
+	private AbstractOptionPane createAbstractOptionsPanel() {
+		// {{{ Options panel
+		AbstractOptionPane optionsPanel = new AbstractOptionPane("Status Options");
+		/* Foreground color */
+		optionsPanel.addComponent(jEdit.getProperty("options.status.foreground"),
+				foregroundColor = new ColorWellButton(jEdit.getColorProperty("view.status.foreground")),
+				GridBagConstraints.VERTICAL);
 
-		JTabbedPane tabs = new JTabbedPane();
-		tabs.addTab("Options",optionsPanel);
-		tabs.add("Widgets", widgetsPanel);
+		/* Background color */
+		optionsPanel.addComponent(jEdit.getProperty("options.status.background"),
+				backgroundColor = new ColorWellButton(jEdit.getColorProperty("view.status.background")),
+				GridBagConstraints.VERTICAL);
 
-		add(tabs, BorderLayout.CENTER);
-		updatePreview();
-	} ///}}}
+		/* Memory foreground color */
+		optionsPanel.addComponent(jEdit.getProperty("options.status.memory.foreground"),
+				memForegroundColor = new ColorWellButton(jEdit.getColorProperty("view.status.memory.foreground")),
+				GridBagConstraints.VERTICAL);
 
-	//{{{ _save() method
+		/* Memory background color */
+		optionsPanel.addComponent(jEdit.getProperty("options.status.memory.background"),
+				memBackgroundColor = new ColorWellButton(jEdit.getColorProperty("view.status.memory.background")),
+				GridBagConstraints.VERTICAL);
+
+		optionsPanel.addSeparator();
+		optionsPanel.addComponent(
+				new JLabel(jEdit.getProperty("options.status.caret.title", "Caret position display options:")));
+		return optionsPanel;
+	}
+
+	private void createCheckboxPanel() {
+		JPanel checkboxPanel = new JPanel(new GridLayout(2, 1));
+		showStatusbar = new JCheckBox(jEdit.getProperty("options.status.visible"));
+		showStatusbar.setSelected(jEdit.getBooleanProperty("view.status.visible"));
+		checkboxPanel.add(showStatusbar);
+		showStatusbarPlain = new JCheckBox(jEdit.getProperty("options.status.plainview.visible"));
+		showStatusbarPlain.setSelected(jEdit.getBooleanProperty("view.status.plainview.visible"));
+		checkboxPanel.add(showStatusbarPlain);
+		checkboxPanel.add(new JLabel(jEdit.getProperty("options.status.caption")));
+
+		JPanel previewPanel = new JPanel();
+		previewStatusBar = new JLabel();
+		previewPanel.add(previewStatusBar);
+		JPanel north = new JPanel(new GridLayout(2, 1));
+		north.add(checkboxPanel);
+		north.add(previewPanel);
+		add(north, BorderLayout.NORTH);
+		// }}}
+	}
+
+	// {{{ _save() method
 	@Override
-	protected void _save()
-	{
-		jEdit.setColorProperty("view.status.foreground",foregroundColor
-			.getSelectedColor());
-		jEdit.setColorProperty("view.status.background",backgroundColor
-			.getSelectedColor());
-		jEdit.setColorProperty("view.status.memory.foreground",memForegroundColor
-			.getSelectedColor());
-		jEdit.setColorProperty("view.status.memory.background",memBackgroundColor
-			.getSelectedColor());
+	protected void _save() {
+		jEdit.setColorProperty("view.status.foreground", foregroundColor.getSelectedColor());
+		jEdit.setColorProperty("view.status.background", backgroundColor.getSelectedColor());
+		jEdit.setColorProperty("view.status.memory.foreground", memForegroundColor.getSelectedColor());
+		jEdit.setColorProperty("view.status.memory.background", memBackgroundColor.getSelectedColor());
 
-		jEdit.setBooleanProperty("view.status.visible",showStatusbar
-			.isSelected());
+		jEdit.setBooleanProperty("view.status.visible", showStatusbar.isSelected());
 
-		jEdit.setBooleanProperty("view.status.plainview.visible",showStatusbarPlain
-			.isSelected());
+		jEdit.setBooleanProperty("view.status.plainview.visible", showStatusbarPlain.isSelected());
 
 		StringBuilder buf = new StringBuilder();
-		for(int i = 0; i < listModel.getSize(); i++)
-		{
-			if(i != 0)
+		for (int i = 0; i < listModel.getSize(); i++) {
+			if (i != 0)
 				buf.append(' ');
 
 			String widgetName = (String) listModel.elementAt(i);
 			buf.append(widgetName);
 		}
-		jEdit.setProperty("view.status",buf.toString());
+		jEdit.setProperty("view.status", buf.toString());
 
 		jEdit.setBooleanProperty("view.status.show-caret-linenumber", showCaretLineNumber.isSelected());
 		jEdit.setBooleanProperty("view.status.show-caret-dot", showCaretDot.isSelected());
@@ -252,11 +234,11 @@ public class StatusBarOptionPane extends AbstractOptionPane
 		jEdit.setBooleanProperty("view.status.show-word-offset", showWordOffset.isSelected());
 		jEdit.setBooleanProperty("view.status.show-word-bufferlength", showWordBufferLength.isSelected());
 
-	} //}}}
+	} // }}}
 
-	//{{{ Private members
+	// {{{ Private members
 
-	//{{{ Instance variables
+	// {{{ Instance variables
 	private ColorWellButton foregroundColor;
 	private ColorWellButton backgroundColor;
 	private ColorWellButton memForegroundColor;
@@ -278,57 +260,51 @@ public class StatusBarOptionPane extends AbstractOptionPane
 	private JCheckBox showCaretBufferLength;
 	private JCheckBox showWordOffset;
 	private JCheckBox showWordBufferLength;
-	//}}}
+	// }}}
 
-	//{{{ updateButtons() method
-	private void updateButtons()
-	{
+	// {{{ updateButtons() method
+	private void updateButtons() {
 		int index = list.getSelectedIndex();
 		remove.setEnabled(index != -1 && listModel.getSize() != 0);
 		moveUp.setEnabled(index > 0);
 		moveDown.setEnabled(index != -1 && index != listModel.getSize() - 1);
 		edit.setEnabled(index != -1);
-	} //}}}
+	} // }}}
 
-	//{{{ updateButtons() method
+	// {{{ updateButtons() method
 	/**
 	 * Update the preview
 	 */
-	private void updatePreview()
-	{
+	private void updatePreview() {
 		StringBuilder buf = new StringBuilder();
-		for(int i = 0; i < listModel.getSize(); i++)
-		{
+		for (int i = 0; i < listModel.getSize(); i++) {
 			if (i != 0)
 				buf.append(' ');
 			String widgetName = (String) listModel.elementAt(i);
-			String sample = jEdit.getProperty("statusbar."+widgetName+".sample",widgetName);
+			String sample = jEdit.getProperty("statusbar." + widgetName + ".sample", widgetName);
 			buf.append(sample);
 		}
 		previewStatusBar.setText(buf.toString());
-	} //}}}
+	} // }}}
 
-	//}}}
+	// }}}
 
-	//{{{ Inner classes
+	// {{{ Inner classes
 
-	//{{{ ActionHandler class
-	private class ActionHandler implements ActionListener
-	{
+	// {{{ ActionHandler class
+	private class ActionHandler implements ActionListener {
 		@Override
-		public void actionPerformed(ActionEvent evt)
-		{
+		public void actionPerformed(ActionEvent evt) {
 			Object source = evt.getSource();
 
-			if(source == add)
-			{
+			if (source == add) {
 				WidgetSelectionDialog dialog = new WidgetSelectionDialog(StatusBarOptionPane.this);
 				String value = dialog.getValue();
 				if (value == null || value.isEmpty())
 					return;
 
 				int index = list.getSelectedIndex();
-				if(index == -1)
+				if (index == -1)
 					index = listModel.getSize();
 				else
 					index++;
@@ -337,48 +313,39 @@ public class StatusBarOptionPane extends AbstractOptionPane
 				list.setSelectedIndex(index);
 				list.ensureIndexIsVisible(index);
 				updatePreview();
-			}
-			else if(source == remove)
-			{
+			} else if (source == remove) {
 				int index = list.getSelectedIndex();
 				listModel.removeElementAt(index);
-				if(listModel.getSize() != 0)
-				{
-					if(listModel.getSize() == index)
-						list.setSelectedIndex(index-1);
+				if (listModel.getSize() != 0) {
+					if (listModel.getSize() == index)
+						list.setSelectedIndex(index - 1);
 					else
 						list.setSelectedIndex(index);
 				}
 				updateButtons();
 				updatePreview();
-			}
-			else if(source == moveUp)
-			{
+			} else if (source == moveUp) {
 				int index = list.getSelectedIndex();
 				Object selected = list.getSelectedValue();
 				listModel.removeElementAt(index);
-				listModel.insertElementAt(selected.toString(), index-1);
-				list.setSelectedIndex(index-1);
-				list.ensureIndexIsVisible(index-1);
+				listModel.insertElementAt(selected.toString(), index - 1);
+				list.setSelectedIndex(index - 1);
+				list.ensureIndexIsVisible(index - 1);
 				updatePreview();
-			}
-			else if(source == moveDown)
-			{
+			} else if (source == moveDown) {
 				int index = list.getSelectedIndex();
 				Object selected = list.getSelectedValue();
 				listModel.removeElementAt(index);
-				listModel.insertElementAt(selected.toString(), index+1);
-				list.setSelectedIndex(index+1);
-				list.ensureIndexIsVisible(index+1);
+				listModel.insertElementAt(selected.toString(), index + 1);
+				list.setSelectedIndex(index + 1);
+				list.ensureIndexIsVisible(index + 1);
 				updatePreview();
-			}
-			else if(source == edit)
-			{
+			} else if (source == edit) {
 				Object selectedValue = list.getSelectedValue();
 				if (selectedValue == null)
 					return;
 				WidgetSelectionDialog dialog = new WidgetSelectionDialog(StatusBarOptionPane.this,
-											 String.valueOf(selectedValue));
+						String.valueOf(selectedValue));
 				String value = dialog.getValue();
 				if (value == null || value.isEmpty())
 					return;
@@ -390,39 +357,34 @@ public class StatusBarOptionPane extends AbstractOptionPane
 				updatePreview();
 			}
 		}
-	} //}}}
+	} // }}}
 
-	//{{{ ListHandler class
-	private class ListHandler implements ListSelectionListener
-	{
+	// {{{ ListHandler class
+	private class ListHandler implements ListSelectionListener {
 		@Override
-		public void valueChanged(ListSelectionEvent evt)
-		{
+		public void valueChanged(ListSelectionEvent evt) {
 			updateButtons();
 		}
-	} //}}}
+	} // }}}
 
-	private static class WidgetListCellRenderer extends DefaultListCellRenderer
-	{
+	private static class WidgetListCellRenderer extends DefaultListCellRenderer {
 		@Override
-		public Component getListCellRendererComponent(JList list, Object value, int index,
-							      boolean isSelected, boolean cellHasFocus)
-		{
+		public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected,
+				boolean cellHasFocus) {
 			super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
 			if (value == null)
 				return this;
 			String widget = String.valueOf(value);
-			String label = jEdit.getProperty("statusbar."+widget+".label", widget);
+			String label = jEdit.getProperty("statusbar." + widget + ".label", widget);
 			setText(label);
 			return this;
 		}
 	}
 
-	//}}}
+	// }}}
 
-	//{{{ WidgetSelectionDialog class
-	private class WidgetSelectionDialog extends EnhancedDialog
-	{
+	// {{{ WidgetSelectionDialog class
+	private class WidgetSelectionDialog extends EnhancedDialog {
 		private final JButton ok;
 		private final JButton cancel;
 		private final JTextField labelField;
@@ -433,9 +395,8 @@ public class StatusBarOptionPane extends AbstractOptionPane
 		private final JRadioButton widgetRadio;
 		private String value;
 
-		//{{{ WidgetSelectionDialog constructors
-		WidgetSelectionDialog(Component comp, String value)
-		{
+		// {{{ WidgetSelectionDialog constructors
+		WidgetSelectionDialog(Component comp, String value) {
 			super(GenericGUIUtilities.getParentDialog(comp), jEdit.getProperty("options.status.edit.title"), true);
 			ButtonGroup buttonGroup = new ButtonGroup();
 			labelRadio = new JRadioButton(jEdit.getProperty("options.status.edit.labelRadioButton"));
@@ -450,17 +411,15 @@ public class StatusBarOptionPane extends AbstractOptionPane
 
 			String[] allWidgets = ServiceManager.getServiceNames("org.gjt.sp.jedit.gui.statusbar.StatusWidgetFactory");
 			Arrays.sort(allWidgets);
-			
+
 			boolean valueIsWidget = value != null && Arrays.binarySearch(allWidgets, value) >= 0;
-			
+
 			Vector<String> widgets = new Vector<String>(allWidgets.length);
 			Set<String> usedWidget = new HashSet<String>(listModel.getSize());
-			for (int i = 0; i < listModel.getSize(); i++)
-			{
+			for (int i = 0; i < listModel.getSize(); i++) {
 				usedWidget.add((String) listModel.get(i));
 			}
-			for (String widget : allWidgets)
-			{
+			for (String widget : allWidgets) {
 				if (!usedWidget.contains(widget) || (valueIsWidget && widget.equals(value)))
 					widgets.add(widget);
 			}
@@ -469,10 +428,10 @@ public class StatusBarOptionPane extends AbstractOptionPane
 			ActionHandler actionHandler = new ActionHandler();
 			labelRadio.addActionListener(actionHandler);
 			widgetRadio.addActionListener(actionHandler);
-			//{{{ south panel
+			// {{{ south panel
 			JPanel southPanel = new JPanel();
-			southPanel.setLayout(new BoxLayout(southPanel,BoxLayout.X_AXIS));
-			southPanel.setBorder(new EmptyBorder(12,0,0,0));
+			southPanel.setLayout(new BoxLayout(southPanel, BoxLayout.X_AXIS));
+			southPanel.setBorder(new EmptyBorder(12, 0, 0, 0));
 			southPanel.add(Box.createGlue());
 			ok = new JButton(jEdit.getProperty("common.ok"));
 			ok.addActionListener(actionHandler);
@@ -483,17 +442,16 @@ public class StatusBarOptionPane extends AbstractOptionPane
 			cancel.addActionListener(actionHandler);
 			southPanel.add(cancel);
 			southPanel.add(Box.createGlue());
-			//}}}
+			// }}}
 
 			labelField.setEnabled(false);
 			widgetRadio.setSelected(true);
 
-
 			JPanel content = new JPanel(new BorderLayout());
-			content.setBorder(new EmptyBorder(12,12,12,12));
+			content.setBorder(new EmptyBorder(12, 12, 12, 12));
 			setContentPane(content);
 			JPanel center = new JPanel();
-			center.setLayout(new BoxLayout(center,BoxLayout.Y_AXIS));
+			center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
 
 			center.add(labelRadio);
 			JPanel p = new JPanel(new BorderLayout());
@@ -504,8 +462,7 @@ public class StatusBarOptionPane extends AbstractOptionPane
 			p = new JPanel(new BorderLayout());
 			p.add(widgetLabel, BorderLayout.WEST);
 			p.add(widgetCombo);
-			if (widgets.isEmpty())
-			{
+			if (widgets.isEmpty()) {
 				labelRadio.setSelected(true);
 				widgetRadio.setEnabled(false);
 				widgetLabel.setEnabled(false);
@@ -513,13 +470,10 @@ public class StatusBarOptionPane extends AbstractOptionPane
 			}
 			center.add(p);
 
-			if (valueIsWidget)
-			{
+			if (valueIsWidget) {
 				widgetRadio.setSelected(true);
 				widgetCombo.setSelectedItem(value);
-			}
-			else
-			{
+			} else {
 				labelRadio.setSelected(true);
 				labelField.setText(value);
 				labelField.setEnabled(true);
@@ -533,73 +487,57 @@ public class StatusBarOptionPane extends AbstractOptionPane
 			setVisible(true);
 		}
 
-		WidgetSelectionDialog(Component comp)
-		{
+		WidgetSelectionDialog(Component comp) {
 			this(comp, null);
-		} //}}}
+		} // }}}
 
-		//{{{ ok() method
+		// {{{ ok() method
 		@Override
-		public void ok()
-		{
-			if (widgetRadio.isSelected())
-			{
+		public void ok() {
+			if (widgetRadio.isSelected()) {
 				value = (String) widgetCombo.getSelectedItem();
-			}
-			else
-			{
+			} else {
 				value = labelField.getText().trim();
 			}
 			dispose();
-		} //}}}
+		} // }}}
 
-		//{{{ cancel() method
+		// {{{ cancel() method
 		@Override
-		public void cancel()
-		{
+		public void cancel() {
 			value = null;
 			dispose();
-		} //}}}
+		} // }}}
 
-		//{{{ getValue() method
-		public String getValue()
-		{
+		// {{{ getValue() method
+		public String getValue() {
 			return value;
-		} //}}}
+		} // }}}
 
-		//{{{ ActionHandler class
-		private class ActionHandler implements ActionListener
-		{
-			//{{{ actionPerformed() method
+		// {{{ ActionHandler class
+		private class ActionHandler implements ActionListener {
+			// {{{ actionPerformed() method
 			@Override
-			public void actionPerformed(ActionEvent evt)
-			{
+			public void actionPerformed(ActionEvent evt) {
 				Object source = evt.getSource();
-				if (source == ok)
-				{
+				if (source == ok) {
 					ok();
-				}
-				else if (source == cancel)
-				{
+				} else if (source == cancel) {
 					cancel();
-				}
-				else if (source == labelRadio)
-				{
+				} else if (source == labelRadio) {
 					labelField.setEnabled(true);
 					widgetCombo.setEnabled(false);
 					validate();
-				}
-				else if (source == widgetRadio)
-				{
+				} else if (source == widgetRadio) {
 					labelField.setEnabled(false);
 					widgetCombo.setEnabled(true);
 					validate();
 				}
-			} //}}}
+			} // }}}
 
-		} //}}}
+		} // }}}
 
-	} //}}}
+	} // }}}
 
 }
 
